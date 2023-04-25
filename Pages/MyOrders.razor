@@ -1,0 +1,108 @@
+﻿@page "/my-orders"
+@using PizzaBay.Services;
+@inject IOrderService orderService
+@inject IJSRuntime JS
+
+    <div class="col-md-12">
+    @if (myOrdersList != null && myOrdersList.Count() != 0)
+    {
+        var SearchTool = new List<string>() { "Delete", "Search" };
+                <SfGrid DataSource="@myOrdersList" @ref="sfGrid" AllowPaging="true" AllowSorting="true" Toolbar="SearchTool" AllowTextWrap="true" AllowReordering="true" AllowRowDragAndDrop="true" AllowSelection="true" EnableHover="true" EnableStickyHeader="true" AllowFiltering=true>
+                    <GridEditSettings AllowDeleting="true" ShowConfirmDialog=true ShowDeleteConfirmDialog=true AllowEditOnDblClick=true Mode="EditMode.Dialog"></GridEditSettings>
+                    <GridPageSettings PageSize="3"></GridPageSettings>
+                    <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+                    <GridEvents OnActionBegin="ActionBeginHandler" TValue="MyOrdersModel"></GridEvents>
+                    <GridAggregates>
+                        <GridAggregate>
+                            <GridAggregateColumns>
+                                <GridAggregateColumn Field=@nameof(MyOrdersModel.Name) Type="AggregateType.Count">
+                                    <FooterTemplate>
+                                @{
+                                    var count = (context as AggregateTemplateContext);
+                                                <div>
+                                                    <p>No. Ordering: @count!.Count</p>
+                                                </div>
+                                }
+                                    </FooterTemplate>
+                                </GridAggregateColumn>
+                            </GridAggregateColumns>
+                        </GridAggregate>
+                        <GridAggregate>
+                            <GridAggregateColumns>
+                                <GridAggregateColumn Field=@nameof(MyOrdersModel.Price) Type="AggregateType.Sum" Format="0.00">
+                                    <FooterTemplate>
+                                @{
+                                    var grandTotal = (context as AggregateTemplateContext);
+                                                <div>
+                                                    <p>Total: Gh¢ @grandTotal!.Sum</p>
+                                                </div>
+                                }
+                                    </FooterTemplate>
+                                </GridAggregateColumn>
+                            </GridAggregateColumns>
+                        </GridAggregate>
+                    </GridAggregates>
+                    <GridColumns>
+                        <GridColumn HeaderText="Action" TextAlign="TextAlign.Left" Width="80">
+                            <Template>
+                        @{
+                            var r = (context as MyOrdersModel);
+                                        <a href="/@r!.PizzaId" class="p-1"><span class="oi oi-pencil"></span></a>
+                        }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn HeaderText="Image" TextAlign="TextAlign.Left" Width="150">
+                            <Template>
+                        @{
+                            var item = (context as MyOrdersModel);
+                                        <img class="card-img-top" src="@item!.Image" style="width:100px; height:100px" />
+                        }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(MyOrdersModel.PizzaId) HeaderText="ID" IsPrimaryKey="true" TextAlign="TextAlign.Justify" Type="ColumnType.Number" Width="80"></GridColumn>
+                        <GridColumn Field=@nameof(MyOrdersModel.Name) HeaderText="Name" Width="150" Type="ColumnType.String"></GridColumn>
+                        <GridColumn Field=@nameof(MyOrdersModel.SizeName) HeaderText="Size" Width="150" Type="ColumnType.String"></GridColumn>
+                        <GridColumn Field=@nameof(MyOrdersModel.Price) HeaderText="Price" Format="¢ 0.00" Width="120" Type="ColumnType.Number"></GridColumn>
+                    </GridColumns>
+                </SfGrid>
+    }
+    else
+    {
+                <div class="text-center">
+                    <h3 class="text-info mt-5 fw-bold">No Pizza Ordered</h3>
+                    <h4><a href="">Order Now!</a></h4>
+                </div>
+    }
+    </div>
+
+
+
+@code {
+    SfGrid<MyOrdersModel>? sfGrid;
+    string Message = string.Empty;
+    List<MyOrdersModel> myOrdersList = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await GetOderedData();
+    }
+
+    private async Task GetOderedData()
+    {
+        myOrdersList = await orderService.GetOrders();
+        StateHasChanged();
+    }
+
+    public async void ActionBeginHandler(ActionEventArgs<MyOrdersModel> Args)
+    {
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            var result = await orderService.DeleteOrder(Args.Data.PizzaId);
+            await JS.InvokeVoidAsync("alert", $"{result.Message}");
+            await GetOderedData(); sfGrid?.Refresh();
+        }
+    }
+
+}
+

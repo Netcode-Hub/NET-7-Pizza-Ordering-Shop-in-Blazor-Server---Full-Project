@@ -1,0 +1,128 @@
+﻿@using PizzaBay.Services;
+
+@inject HttpClient httpClient
+@inject ILocalStorageService localStorageService
+@inject IJSRuntime JS
+@inject IOrderService orderService
+
+<div id="target" style="height:100%; width:100%;"></div>
+<SfDialog Width="55%" @ref="sfDialog" Height="65%" Target="#target" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
+    <DialogTemplates>
+        <Header> Order Pizza </Header>
+        <Content>
+            @if (pizza != null)
+            {
+
+                <div class="card">
+                    <div class="card-body">
+                        @{
+                            <h4 class="text-muted p-1">Choose Size</h4>
+                            string small = "Small ( ¢" + pizza.SmallPrice.ToString("0.00") + " )";
+                            string medium = "Medium ( ¢" + pizza.MediumPrice.ToString("0.00") + " )";
+                            string large = "Large ( ¢" + pizza.LargePrice.ToString("0.00") + " )";
+                            string extralarge = "Extra Large ( ¢" + pizza.ExtraLargePrice.ToString("0.00") + " )";
+                        }
+                        <SfRadioButton CssClass="p-1" TChecked="string" ValueChange="onValueChange" Label="@small" Name="options" Value="@pizza.SmallPrice.ToString()" @bind-Checked="stringChecked"></SfRadioButton>
+                        <SfRadioButton CssClass="p-1" TChecked="string" ValueChange="onValueChange" Label="@medium" Name="options" Value="@pizza.MediumPrice.ToString()" @bind-Checked="stringChecked"></SfRadioButton>
+                        <SfRadioButton CssClass="p-1" TChecked="string" ValueChange="onValueChange" Label="@large" Name="options" Value="@pizza.LargePrice.ToString()" @bind-Checked="stringChecked"></SfRadioButton>
+                        <SfRadioButton CssClass="p-1" TChecked="string" ValueChange="onValueChange" Label="@extralarge" Name="options" Value="@pizza.ExtraLargePrice.ToString()" @bind-Checked="stringChecked"></SfRadioButton>
+                        <hr>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <img class="card-img-top" src="@pizza.Image" style="width:275px; height: 150px; border-radius:20px;" />
+                            </div>
+                            <div class="col-md-6" style="font-size:12px; height: 150px; overflow:auto;">@pizza.Description</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Add to Order List" IsPrimary="true" OnClick="@(async ()=> await @AddToListClick(pizza.Id))" />
+        <DialogButton Content="Cancel" OnClick="@CancelClick" />
+    </DialogButtons>
+</SfDialog>
+
+@if (pizzas != null)
+{
+    foreach (var item in pizzas)
+    {
+
+        <div class=" col-md-3 mb-4">
+            <a style="text-decoration:none;" @onclick="(async ()=> await HandlePizzaClick(item.Id))">
+                <div class="card imgCardCover p-1 mb-4">
+                    <img class="card-img-top imageCss" src="@item.Image" style="width:270px; height:150px;" />
+                    <span class="text-center text-muted fw-bold" style="font-family:Arial, Helvetica, sans-serif">@item.Name</span>
+                </div>
+            </a>
+        </div>
+
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    SfDialog? sfDialog;
+
+    private string stringChecked = "0";
+    private bool IsVisible { get; set; } = false;
+
+    List<Pizza> pizzas = new();
+    Pizza pizza = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetPizzas();
+    }
+
+    private async Task GetPizzas()
+    {
+        pizzas = await httpClient.GetFromJsonAsync<List<Pizza>>("api/pizza");
+    }
+
+    private async Task HandlePizzaClick(int id)
+    {
+        pizza = await httpClient.GetFromJsonAsync<Pizza>($"api/pizza/{id}");
+        this.IsVisible = true;
+
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id > 0)
+            await HandlePizzaClick(Id);
+    }
+
+    private void CancelClick()
+    {
+        this.IsVisible = false;
+    }
+
+    private async Task AddToListClick(int id)
+    {
+        this.IsVisible = true;
+        if (Convert.ToDouble(stringChecked) > 0)
+        {
+            var orderModel = new OrderModel { PizzaId = id, PizzaPrice = Convert.ToDouble(stringChecked) };
+            var result = await orderService.AddOrder(orderModel);
+            stringChecked = "0";
+            await JS.InvokeVoidAsync("alert", result.Message);
+        }
+        else { await JS.InvokeVoidAsync("alert", "Please select Pizza Size"); }
+    }
+
+    private void onValueChange(ChangeArgs<string> args)
+    {
+        stringChecked = args.Value;
+    }
+}
+
+
+
+<style>
+
+    .imgCardCover:hover {
+        opacity: 0.5;
+    }
+</style>

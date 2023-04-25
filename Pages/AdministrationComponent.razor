@@ -1,0 +1,330 @@
+﻿@page "/manage"
+@page "/manage/{id:int}"
+@inject HttpClient httpClient
+@inject IJSRuntime JS
+@inject NavigationManager navigationManager
+
+@*Dialog box*@
+<div id="target" style="height:100%; width:100%;"></div>
+<SfDialog Width="50%" Height="100%" Target="#target" ShowCloseIcon="true" EnableResize=true IsModal="true" @bind-Visible="@IsVisible">
+    <DialogTemplates>
+        <Header>
+            @if (Id > 0)
+            {
+                <h3><span class="oi oi-arrow-circle-top"></span> Update Pizza</h3>
+            }
+            else
+            {
+                <h3><span class="oi oi-plus"></span> Add Pizza</h3>
+            }
+        </Header>
+        <Content>
+            <div class="card">
+                <div class="card-body">
+                    <EditForm Model="pizza" OnValidSubmit="HandleAdd">
+                        <DataAnnotationsValidator></DataAnnotationsValidator><ValidationSummary></ValidationSummary>
+                        <div class="form-group border p-3">
+                            <label for="name">Name</label>
+                            <InputText id="name" Class="form-control mt-1" @bind-Value="pizza.Name" />
+                            <ValidationMessage For="@(() => pizza.Name)" />
+                        </div>
+                        <div class="form-group border p-3">
+                            <label for="description">Description</label>
+                            <InputTextArea id="description" Class="form-control mt-1" @bind-Value="pizza.Description" />
+                            <ValidationMessage For="@(() => pizza.Description)" />
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mt-2 border p-3">
+                                    <label for="smallprice">Small Price</label><br />
+                                    <InputNumber id="smallprice" Class="form-control mt-1" @bind-Value="pizza.SmallPrice" />
+                                    <ValidationMessage For="@(() => pizza.SmallPrice)" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mt-2 border p-3">
+                                    <label for="mediumprice">Medium Price</label><br />
+                                    <InputNumber id="mediumprice" Class="form-control mt-1" @bind-Value="pizza.MediumPrice" />
+                                    <ValidationMessage For="@(() => pizza.MediumPrice)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mt-2 border p-3">
+                                    <label for="largeprice">Large Price</label><br />
+                                    <InputNumber id="largeprice" Class="form-control mt-1" @bind-Value="pizza.LargePrice" />
+                                    <ValidationMessage For="@(() => pizza.LargePrice)" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mt-2 border p-3">
+                                    <label for="extralarge">Extra Large Price</label><br />
+                                    <InputNumber id="extralarge" Class="form-control mt-1" @bind-Value="pizza.ExtraLargePrice" />
+                                    <ValidationMessage For="@(() => pizza.ExtraLargePrice)" />
+                                </div>
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mt-2 border p-3">
+                                    <label class="form-label" for="image">Add Pizza Image</label>&nbsp; <span class="text-danger fw-bold">@uploadMessage</span>
+                                    <InputFile id="image" OnChange="OnFileChange" class="form-control mt-1"></InputFile>
+                                    <ValidationMessage For="@(()=> pizza.Image)"></ValidationMessage>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mt-2 border p-3">
+                                    <label class="form-label" for="image">Image Output</label><br />
+                                    <img class="card-img-top" src="@pizza.Image" style="width:230px; height:150px;" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group mt-2">
+                            @if (Id > 0)
+                            {
+                                <button type="button" class="btn btn-danger float-end m-2" @onclick="CancelClick">
+                                    <span class="oi oi-circle-x"></span>&nbsp; Cancel
+                                </button>
+                                <button type="submit" class="btn btn-warning m-2 float-end">
+                                    <span class="oi oi-arrow-circle-top"></span>&nbsp; Update Pizza
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="reset" class="btn btn-warning float-end m-2">
+                                    <span class="oi oi-caret-left"></span>&nbsp; Reset
+                                </button>
+                                <button type="button" class="btn btn-danger float-end m-2" @onclick="CancelClick">
+                                    <span class="oi oi-circle-x"></span>&nbsp; Cancel
+                                </button>
+                                <button type="submit" class="btn btn-primary m-2 float-end">
+                                    <span class="oi oi-plus"></span>&nbsp; Add Pizza
+                                </button>
+                            }
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@*SfGrid component*@
+
+<div class="col-md-12">
+    <div class="card">
+        <div class="card-body">
+            <button class="btn btn-primary" @onclick="HandleDialogClick"> <span class="oi oi-plus"></span> Add Pizza Data</button>
+        </div>
+    </div>
+</div>
+<div class="col-md-12">
+    @{
+        var SearchTool = new List<string>() { "Add", "Edit", "Delete", "Update", "Cancel", "Search", "Print", "ExcelExport", "PdfExport", "CsvExport" };
+    }
+    <SfGrid DataSource="@pizzas" @ref="sfGrid" AllowPaging="true" AllowSorting="true" AllowResizing="true" Toolbar="SearchTool" AllowTextWrap="true" AllowGrouping="true" AllowReordering="true" AllowRowDragAndDrop="true" AllowSelection="true" EnableHover="true" EnableStickyHeader="true" AllowExcelExport="true" AllowFiltering=true>
+        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowConfirmDialog=true ShowDeleteConfirmDialog=true AllowEditOnDblClick=true AllowNextRowEdit=true Mode="EditMode.Dialog"></GridEditSettings>
+        <GridPageSettings PageSize="3"></GridPageSettings>
+        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Excel"></GridFilterSettings>
+        <GridEvents OnActionBegin="ActionBeginHandler" TValue="Pizza"></GridEvents>
+
+        <GridColumns>
+            <GridColumn HeaderText="Action" TextAlign="TextAlign.Left" Width="60" AllowAdding=false AllowEditing=false>
+                <Template>
+                    @{
+                        var r = (context as Pizza);
+                        <a href="manage/@r!.Id" class="p-1"><span class="oi oi-pencil"></span></a>
+                    }
+                </Template>
+            </GridColumn>
+            <GridColumn HeaderText="Image" TextAlign="TextAlign.Left" Width="150" AllowAdding=false AllowEditing=false>
+                <Template>
+                    @{
+                        var item = (context as Pizza);
+                        <img class="card-img-top" src="@item!.Image" style="width:100px; height:100px" />
+                    }
+                </Template>
+            </GridColumn>
+            <GridColumn Field=@nameof(Pizza.Id) HeaderText="ID" IsPrimaryKey="true" AllowAdding=false AllowEditing=false TextAlign="TextAlign.Justify" Type="ColumnType.Number" Width="80"></GridColumn>
+            <GridColumn Field=@nameof(Pizza.Name) HeaderText="Name" Width="150" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(Pizza.SmallPrice) HeaderText="Small Price" Format="¢ 0.00" Width="120" Type="ColumnType.Number"></GridColumn>
+            <GridColumn Field=@nameof(Pizza.MediumPrice) HeaderText="Medium Price" Format="¢ 0.00" Type="ColumnType.Number" TextAlign="TextAlign.Justify" Width="120"></GridColumn>
+            <GridColumn Field=@nameof(Pizza.LargePrice) HeaderText="Large Price" Format="¢ 0.00" TextAlign="TextAlign.Justify" Width="120" Type="ColumnType.Number"></GridColumn>
+            <GridColumn Field=@nameof(Pizza.ExtraLargePrice) HeaderText="Extra Large" TextAlign="TextAlign.Justify" Width="120" Format="¢ 0.00" Type="ColumnType.Number"></GridColumn>
+            <GridColumn Field=@nameof(Pizza.Description) HeaderText="Description" AutoFit=true Type="ColumnType.String"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+
+<hr />
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    SfGrid<Pizza>? sfGrid;
+
+    string uploadMessage = string.Empty;
+    private bool IsVisible { get; set; } = false;
+
+    List<Pizza> pizzas = new();
+    PizzaModel pizza = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetPizzas();
+        if (Id > 0)
+        {
+            var result = await httpClient.GetFromJsonAsync<Pizza>($"api/pizza/{Id}");
+            pizza = await ConvertPizzaToPizzaModel(result!);
+            OpenDialog();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id > 0)
+        {
+            var result = await httpClient.GetFromJsonAsync<Pizza>($"api/pizza/{Id}");
+            pizza = await ConvertPizzaToPizzaModel(result!);
+            OpenDialog();
+        }
+
+    }
+
+    private async Task<PizzaModel> ConvertPizzaToPizzaModel(Pizza model)
+    {
+        var r = new PizzaModel
+            {
+                Id = model.Id,
+                Name = model.Name,
+                Description = model.Description,
+                SmallPrice = model.SmallPrice,
+                MediumPrice = model.MediumPrice,
+                LargePrice = model.LargePrice,
+                ExtraLargePrice = model.ExtraLargePrice,
+                Image = model.Image
+            };
+        return r;
+    }
+    private async Task<Pizza> ConvertPizzaModelToPizza(PizzaModel model)
+    {
+        var r = new Pizza
+            {
+                Id = model.Id,
+                Name = model.Name,
+                Description = model.Description,
+                SmallPrice = model.SmallPrice,
+                MediumPrice = model.MediumPrice,
+                LargePrice = model.LargePrice,
+                ExtraLargePrice = model.ExtraLargePrice,
+                Image = model.Image
+            };
+        return r;
+    }
+
+    private void OpenDialog()
+    {
+        this.IsVisible = true;
+    }
+    private void HandleDialogClick()
+    {
+        navigationManager.NavigateTo("/manage");
+        ClearModel();
+        OpenDialog();
+    }
+
+    private void ClearModel()
+    {
+        pizza.Name = null!;
+        pizza.Description = null;
+        pizza.Image = null;
+        pizza.SmallPrice = 0.00;
+        pizza.MediumPrice = 0.00;
+        pizza.LargePrice = 0.00;
+        pizza.ExtraLargePrice = 0.00;
+    }
+
+    private void CancelClick()
+    {
+        this.IsVisible = false;
+    }
+
+    private async Task HandleAdd()
+    {
+        var model = await ConvertPizzaModelToPizza(pizza);
+        var result = await httpClient.PostAsJsonAsync("api/pizza", model);
+        var response = await result.Content.ReadFromJsonAsync<Response>();
+        await GetPizzas();
+        sfGrid?.Refresh();
+        await JS.InvokeVoidAsync("alert", response!.Message);
+
+    }
+
+    private async Task OnFileChange(InputFileChangeEventArgs e)
+    {
+        var format = ""; uploadMessage = "";
+        if (e.File.Name.ToLower().Contains(".jpg"))
+        {
+            format = "image/jpg";
+        }
+        else if (e.File.Name.ToLower().Contains(".jpeg"))
+        {
+            format = "image/jpeg";
+        }
+        else if (e.File.Name.ToLower().Contains(".png"))
+        {
+            format = "image/png";
+        }
+        else
+        {
+            uploadMessage = "Invalid file selected (jpg, jpeg, png only)";
+            return;
+        }
+        var resizeImage = await e.File.RequestImageFileAsync(format, 100, 100);
+        var buffer = new byte[resizeImage.Size];
+        await resizeImage.OpenReadStream().ReadAsync(buffer);
+        var imageData = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+        pizza.Image = imageData;
+    }
+
+    private async Task GetPizzas()
+    {
+        pizzas = await httpClient.GetFromJsonAsync<List<Pizza>>("api/pizza");
+    }
+
+    public async void ActionBeginHandler(ActionEventArgs<Pizza> Args)
+    {
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        {
+            if (Args.Data.Name != null && Args.Data.Description != null && Args.Data.SmallPrice > 0 && Args.Data.MediumPrice > 0
+                 && Args.Data.LargePrice > 0 && Args.Data.ExtraLargePrice > 0)
+            {
+                var result = await httpClient.PostAsJsonAsync("api/pizza", Args.Data);
+                var response = await result.Content.ReadFromJsonAsync<Response>();
+                await JS.InvokeVoidAsync("alert", response!.Message);
+                await GetPizzas();
+                sfGrid?.Refresh();
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "All fields required");
+            }
+        }
+
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            var result = await httpClient.DeleteAsync($"api/pizza/{Args.Data.Id}");
+            var response = await result.Content.ReadFromJsonAsync<Response>();
+            await JS.InvokeVoidAsync("alert", response!.Message);
+            await GetPizzas();
+            sfGrid?.Refresh();
+        }
+    }
+}
+
+
+
+
+

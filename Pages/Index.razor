@@ -1,0 +1,15 @@
+﻿@page "/"
+@page "/{id:int}"
+@if (Id > 0)
+{
+    <PizzaList Id="Id"></PizzaList>
+}
+else
+{
+    <PizzaList></PizzaList>
+}
+
+
+@code {
+    [Parameter] public int Id { get; set; }
+}
